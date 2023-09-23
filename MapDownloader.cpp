@@ -9,14 +9,12 @@
 #include <urlmon.h>
 #pragma comment(lib, "urlmon.lib")
 
-#define VERSION "1.0"
-#define FASTDL_MAPS_EU "http://eu.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
-#define FASTDL_MAPS_RU "http://ext.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
-#define SERVER_MAPLIST "http://n5srv.ru.net/n5/maplist_%s.txt"
+#define VERSION "1.1"
+#define URL_FASTDL "http://eu.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
+#define URL_MAPLIST "http://n5srv.ru.net/n5/util/maplist.php?downloadlist=%s"
 
 const char* tempfile = "temp.dat";
 char curent_map[256] = {0};
-bool useRUserver = true;
 
 struct SMapInfo {
     char name[128];
@@ -49,7 +47,7 @@ char buf[OutBufSize];
 
 bool DownloadMap(std::string& mapname, std::string& dstfile) {
     char mapurl[256];
-    sprintf(mapurl, useRUserver ? FASTDL_MAPS_RU : FASTDL_MAPS_EU, mapname.c_str());
+    sprintf(mapurl, URL_FASTDL, mapname.c_str());
 
     SetStatus("Downloading...");
  
@@ -139,13 +137,10 @@ int main() {
     std::cout << "Download path: " + gamepath << std::endl;
     
     // get list of maps
-    useRUserver = (MessageBox(NULL, L"Использовать RU сервер? (рекомендуется)", L"N5 MapDownloader", MB_YESNO) == IDYES);
-    std::cout << "Server: " << (useRUserver ? "RU" : "EU") << std::endl;
-
     bool shouldloadall = (MessageBox(NULL, L"Загружать только используемые карты?\nЕсли нажать Нет - загрузятся все карты, которые есть на сервере.", L"N5 MapDownloader", MB_YESNO) == IDNO);
     
     char maplist_url[256];
-    sprintf(maplist_url, SERVER_MAPLIST, shouldloadall ? "all" : "allowed");
+    sprintf(maplist_url, URL_MAPLIST, shouldloadall ? "all" : "allowed");
 
     if (S_OK != URLDownloadToFileA(NULL, maplist_url, tempfile, 0, NULL)) {
         std::cout << "Failed to download maplist from " << maplist_url << std::endl;
@@ -162,14 +157,14 @@ int main() {
     std::string line;
     while (std::getline(file, line)) {
         SMapInfo* mapinfo = new SMapInfo;
-        if (sscanf(line.c_str(), "%s %i %i", mapinfo->name, &mapinfo->size, &mapinfo->pksize)) {
+        if (sscanf(line.c_str(), "%s %i", mapinfo->name, &mapinfo->size)) {
             std::string dstfile = gamepath + mapinfo->name + ".bsp";
             if (file_exists(dstfile) && file_correct(dstfile, mapinfo)) {
                 // skiping
             }
             else {
                 maplist.push_back(mapinfo);
-                remainmbytes += (mapinfo->pksize / 1048576);
+                remainmbytes += (mapinfo->size / 1048576);
             }
         }
     }
@@ -185,7 +180,7 @@ int main() {
         sprintf(curent_map, "(%i %iMB) %s ", (int)maplist.size() - count, ((int)remainmbytes), mapname.c_str());
 
         DownloadMap(mapname, dstfile);
-        remainmbytes -= (mapinfo->pksize / 1048576);
+        remainmbytes -= (mapinfo->size / 1048576);
         count += 1;
     }
 

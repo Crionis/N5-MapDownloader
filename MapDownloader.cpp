@@ -11,7 +11,7 @@
 
 #define VERSION "1.1"
 #define URL_FASTDL "http://eu.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
-#define URL_MAPLIST "http://n5srv.ru.net/n5/util/maplist.php?downloadlist=%s"
+#define URL_MAPLIST "http://zs.n5srv.ru.net/n5/util/maplist.php?downloadlist=%s"
 
 const char* tempfile = "temp.dat";
 char curent_map[256] = {0};
@@ -40,6 +40,10 @@ void SetStatus(const char* status, bool end = false) {
     } else {
         std::cout << curent_map << "(" << status << ")" << whitespace << '\r';
     }
+}
+
+void ShowError(const wchar_t* msg) {
+    MessageBox(NULL, msg, L"Error!", MB_ICONERROR | MB_OK);
 }
 
 const int OutBufSize = 65536;
@@ -96,7 +100,7 @@ bool GetGamePath(std::string& path) {
     if (lResult != ERROR_SUCCESS) {
         lResult = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_READ, &hKey);
         if (lResult != ERROR_SUCCESS) {
-            std::cout << "Failed to open registry key" << std::endl;
+            ShowError(L"Failed to open registry key");
             return false;
         }
     }
@@ -105,7 +109,7 @@ bool GetGamePath(std::string& path) {
     DWORD pathSize = sizeof(steamPath);
     lResult = RegQueryValueExA(hKey, "InstallPath", 0, NULL, (LPBYTE)steamPath, &pathSize);
     if (lResult != ERROR_SUCCESS) {
-        std::cout << "Failed to query registry value" << std::endl;
+        ShowError(L"Failed to query registry value");
         RegCloseKey(hKey);
         return false;
     }
@@ -115,7 +119,7 @@ bool GetGamePath(std::string& path) {
     path = std::string(steamPath) + "\\steamapps\\common\\GarrysMod\\";
     
     if (GetFileAttributesA(path.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        std::cout << "GarrysMod folder not found" << std::endl;
+        ShowError(L"GarrysMod folder not found");
         return false;
     }
 
@@ -143,26 +147,26 @@ int main() {
     sprintf(maplist_url, URL_MAPLIST, shouldloadall ? "all" : "allowed");
 
     if (S_OK != URLDownloadToFileA(NULL, maplist_url, tempfile, 0, NULL)) {
-        std::cout << "Failed to download maplist from " << maplist_url << std::endl;
+        ShowError(L"Failed to download maplist");
         return 1;
     }
 
     std::vector <SMapInfo*> maplist;
     std::ifstream file(tempfile);
     if (!file.is_open()) {
-        std::cout << "Failed to open " << tempfile << std::endl;
+        ShowError(L"Failed to open temp file");
         return 1;
     }
 
     std::string line;
+    std::getline(file, line);
     while (std::getline(file, line)) {
         SMapInfo* mapinfo = new SMapInfo;
         if (sscanf(line.c_str(), "%s %i", mapinfo->name, &mapinfo->size)) {
             std::string dstfile = gamepath + mapinfo->name + ".bsp";
             if (file_exists(dstfile) && file_correct(dstfile, mapinfo)) {
                 // skiping
-            }
-            else {
+            } else {
                 maplist.push_back(mapinfo);
                 remainmbytes += (mapinfo->size / 1048576);
             }
@@ -187,6 +191,8 @@ int main() {
     std::remove(tempfile);
 
     std::cout << "Complete!" << std::endl;
+
+    MessageBox(NULL, L"Загрузка завершена", L"MapDownloader", MB_ICONASTERISK | MB_OK);
 
     return 0;
 }

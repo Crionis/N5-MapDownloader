@@ -3,15 +3,16 @@
 #include <windows.h>
 #include <fstream>
 #include <vector>
+#include <shlobj.h>
 
 #include "bzip2/bzlib.h"
 
 #include <urlmon.h>
 #pragma comment(lib, "urlmon.lib")
 
-#define VERSION "1.1"
-#define URL_FASTDL "http://eu.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
-#define URL_MAPLIST "http://zs.n5srv.ru.net/n5/util/maplist.php?downloadlist=%s"
+#define VERSION "1.2"
+#define URL_FASTDL "http://cds.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
+#define URL_MAPLIST "http://cds.n5srv.ru.net/n5/util/maplist.php?downloadlist=%s"
 
 const char* tempfile = "temp.dat";
 char curent_map[256] = {0};
@@ -116,14 +117,40 @@ bool GetGamePath(std::string& path) {
 
     RegCloseKey(hKey);
         
-    path = std::string(steamPath) + "\\steamapps\\common\\GarrysMod\\";
-    
+    path = std::string(steamPath) + "\\steamapps\\common\\GarrysMod";
     if (GetFileAttributesA(path.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        ShowError(L"GarrysMod folder not found");
         return false;
     }
 
     return true;
+}
+
+bool GetManualGamePath(std::string& path) {
+
+    char buffer[MAX_PATH];
+    bool result = false;
+
+    BROWSEINFO bi = { 0 };
+    bi.lpszTitle = L"Укажите папку установленной игры (GarrysMod)";
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+
+    LPITEMIDLIST pidl = NULL;
+    if ((pidl = SHBrowseForFolder(&bi)) != NULL) {
+        if (SHGetPathFromIDListA(pidl, buffer)) {
+            path = std::string(buffer);
+            if (GetFileAttributesA(strcat(buffer, "\\garrysmod\\gameinfo.txt")) != INVALID_FILE_ATTRIBUTES) {
+                result = true;
+            }
+        }
+
+        IMalloc* imalloc = 0;
+        if(SUCCEEDED(SHGetMalloc(&imalloc))) {
+            imalloc->Free(pidl);
+            imalloc->Release();
+        }
+    }
+
+    return result;
 }
 
 int main() {
@@ -133,11 +160,13 @@ int main() {
     std::cout << "N5 MapDownloader v" << VERSION << std::endl;
 
     // get GMod maps path
-    if (!GetGamePath(gamepath)) {
-        return 1;
+    bool validpath = GetGamePath(gamepath);
+    while (!validpath) {
+        ShowError(L"Папка с игрой GarrysMod не найдена! Укажите её вручную.");
+        validpath = GetManualGamePath(gamepath);
     }
 
-    gamepath.append("garrysmod\\download\\maps\\");
+    gamepath.append("\\garrysmod\\download\\maps\\");
     std::cout << "Download path: " + gamepath << std::endl;
     
     // get list of maps

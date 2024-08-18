@@ -10,8 +10,8 @@
 #include <urlmon.h>
 #pragma comment(lib, "urlmon.lib")
 
-#define VERSION "1.2"
-#define URL_FASTDL "http://cds.n5srv.ru.net/n5/fastdl/zs/maps/%s.bsp.bz2"
+#define VERSION "1.2.1"
+#define URL_FASTDL "http://cds.n5srv.ru.net/fastdl/zs/maps/%s.bsp.bz2"
 #define URL_MAPLIST "http://cds.n5srv.ru.net/n5/util/maplist.php?downloadlist=%s"
 
 const char* tempfile = "temp.dat";

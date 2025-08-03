@@ -10,11 +10,11 @@
 #include <urlmon.h>
 #pragma comment(lib, "urlmon.lib")
 
-#define VERSION "1.3"
+#define VERSION "1.2.2"
+#define CONTENT_SERVER "cds.n5srv.ru.net"
 #define URL_FASTDL "http://%s/fastdl/zs/maps/%s.bsp.bz2"
 #define URL_MAPLIST "http://%s/zs/util/maplist.php?downloadlist=%s"
 
-std::string csurl = "cds.n5srv.ru.net";
 const char* tempfile = "temp.dat";
 char curent_map[256] = {0};
 
@@ -53,7 +53,7 @@ char buf[OutBufSize];
 
 bool DownloadMap(std::string& mapname, std::string& dstfile) {
     char mapurl[256];
-    sprintf(mapurl, URL_FASTDL, csurl.c_str(), mapname.c_str());
+    sprintf(mapurl, URL_FASTDL, CONTENT_SERVER, mapname.c_str());
 
     SetStatus("Downloading...");
  
@@ -158,14 +158,8 @@ int main(int argc, char* argv[]) {
     std::string gamepath;
     size_t remainmbytes = 0;
 
-    if (argc > 1) {
-        if (strcmp("-csurl", argv[1]) == 0) {
-            csurl = argv[2];
-        }
-    }
-
     std::cout << "N5 MapDownloader v" << VERSION << std::endl;
-    std::cout << "Content server: " << csurl << std::endl;
+    std::cout << "Content server: " << CONTENT_SERVER << std::endl;
 
     // get GMod maps path
     bool validpath = GetGamePath(gamepath);
@@ -181,7 +175,7 @@ int main(int argc, char* argv[]) {
     bool shouldloadall = (MessageBox(NULL, L"Загружать только используемые карты?\nЕсли нажать Нет - загрузятся все карты, которые есть на сервере.", L"N5 MapDownloader", MB_YESNO) == IDNO);
     
     char maplist_url[256];
-    sprintf(maplist_url, URL_MAPLIST, csurl.c_str(), shouldloadall ? "all" : "allowed");
+    sprintf(maplist_url, URL_MAPLIST, CONTENT_SERVER, shouldloadall ? "all" : "allowed");
 
     if (S_OK != URLDownloadToFileA(NULL, maplist_url, tempfile, 0, NULL)) {
         ShowError(L"Failed to download maplist");
